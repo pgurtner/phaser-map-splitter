@@ -1,4 +1,3 @@
-import { dirname } from 'path'
 import { changeRelativePathToNewLocation, range } from './utils'
 import { fromByteArray, toByteArray } from 'base64-js'
 
@@ -22,7 +21,7 @@ export interface MapMasterFile {
 	tilesets: unknown[]
 }
 
-export function changeFilepaths (tiledEntity: Record<string, unknown>, oldPosition: string, newPosition: string) {
+export function changeFilepaths (tiledEntity: MapMasterFile | Record<string, unknown>, oldPosition: string, newPosition: string) {
 	if (Array.isArray(tiledEntity.tilesets)) {
 		tiledEntity.tilesets = tiledEntity.tilesets.map(tileset => ({
 			...tileset,
@@ -72,7 +71,7 @@ function createChunk(map, master: MapMasterFile, chunkId: number) {
 	const { chunkWidth, chunkHeight, horizontalChunkAmount, mapHeight, mapWidth } = master
 
 	const chunkTopLeftX = (chunkId % horizontalChunkAmount) * chunkWidth
-	const chunkTopLeftY = (chunkId / horizontalChunkAmount) * chunkHeight
+	const chunkTopLeftY = (Math.floor(chunkId / horizontalChunkAmount)) * chunkHeight
 
 	const chunk = {
 		...map,
@@ -91,8 +90,8 @@ function createLayerChunk(master: MapMasterFile, chunkTopLeftX: number, chunkTop
 	return (layer) => {
 		return {
 			...layer,
-			width: master.chunkWidth,
-			height: master.chunkHeight,
+			width: Math.min(master.chunkWidth, master.mapWidth - chunkTopLeftX),
+			height: Math.min(master.chunkHeight, master.mapHeight - chunkTopLeftY),
 			data: extractChunkFromTileLayer(layer, master, chunkTopLeftX, chunkTopLeftY),
 		}
 	}
@@ -102,12 +101,15 @@ function extractChunkFromTileLayer(layer, master: MapMasterFile, chunkTopLeftX: 
 	const { mapWidth, chunkWidth, chunkHeight } = master
 	const liststart = mapWidth * chunkTopLeftY + chunkTopLeftX
 
+	const remainingRows = Math.min(chunkHeight, master.mapHeight - chunkTopLeftY)
+	const remainingCols = Math.min(chunkWidth, master.mapWidth - chunkTopLeftX)
+
 	const decodedTiles = decodeTiles(layer)
 
-	const extractedTiles = range(chunkHeight)
+	const extractedTiles = range(remainingRows)
 		.map((y) => {
 			const begin = liststart + y * mapWidth
-			const end = begin + chunkWidth
+			const end = begin + remainingCols
 			return decodedTiles.slice(begin, end)
 		})
 		.flat()
