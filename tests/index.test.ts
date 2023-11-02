@@ -1,55 +1,32 @@
-import { PathLike, PathOrFileDescriptor, readFileSync } from "fs"
+import { readFileSync } from "fs"
 import { SplitterConfig, splitMap } from "../src"
 
 test('std map splitting', () => {
-	const testMapRaw = readFileSync('tests/testmap.json', {encoding: 'utf8'})
+	const testMapRaw = readFileSync('tests/untitled.json', {encoding: 'utf8'})
 	const testMap = JSON.parse(testMapRaw)
-	const existsSyncCalls: [path: PathLike][] = []
-	const mkdirSyncCalls: any[] = []
-	const readFileSyncCalls: PathOrFileDescriptor[][] = []
-	const writeFileCalls: any[] = []
 
 	const config: SplitterConfig = {
-		inputFilePath: 'input',
-		outputFolderPath: 'output',
-		chunkWidth: 32,
-		chunkHeight: 32,
-		fs: {
-			existsSync: (...args) => {
-				existsSyncCalls.push(args)
-				return true
-			},
-			mkdirSync: (...args) => {
-				mkdirSyncCalls.push(args)
-				return undefined
-			},
-			readFileSync: (path: PathOrFileDescriptor, ...args): any => {
-				readFileSyncCalls.push([path].concat(...args))
-				if (path === 'input') {
-					return testMapRaw
-				} else {
-					throw 'invalid file path'
-				}
-			},
-			writeFile: (...args) => {
-				writeFileCalls.push(args)
-				return new Promise(resolve => resolve())
-			}
-		}
+		map: testMap,
+		chunkWidth: 2,
+		chunkHeight: 2,
 	}
 
-	const prom = splitMap(config)
+	const {master, chunks} = splitMap(config)
 
-	expect(existsSyncCalls.length).toBe(1)
-	expect(mkdirSyncCalls.length).toBe(0)
-
-	expect(readFileSyncCalls.length).toBe(1)
-	expect(readFileSyncCalls[0][0]).toEqual('input')
-
-	const horizontalChunkAmount = Math.ceil(testMap.width / config.chunkWidth)
-	const verticalChunkAmount = Math.ceil(testMap.height / config.chunkHeight)
+	const horizontalChunkAmount = Math.ceil(testMap.width/2)
+	const verticalChunkAmount = Math.ceil(testMap.height/2)
 	const totalChunkAmount = horizontalChunkAmount*verticalChunkAmount
-	expect(writeFileCalls.length).toBe(totalChunkAmount)
 
-	return prom.then(data => expect(data).toBeUndefined())
+	expect(master.chunkHeight).toBe(2)
+	expect(master.chunkWidth).toBe(2)
+	expect(master.globalLayers.length).toBe((testMap.layers.filter(layer => layer.type !== 'tilelayer')).length)
+	expect(master.horizontalChunkAmount).toBe(horizontalChunkAmount)
+	expect(master.verticalChunkAmount).toBe(verticalChunkAmount)
+	expect(master.mapHeight).toBe(testMap.height)
+	expect(master.mapWidth).toBe(testMap.width)
+	expect(master.tileHeight).toBe(testMap.tileheight)
+	expect(master.tileWidth).toBe(testMap.tilewidth)
+	expect(master.tilesets.length).toBe(testMap.tilesets.length)
+	
+	expect(chunks.length).toBe(totalChunkAmount)
 })
