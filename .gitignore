@@ -1,4 +1,5 @@
 built/*
+tests/map_tests/*
 
 # Logs
 logs
