@@ -1,20 +1,11 @@
-import { existsSync, mkdirSync, readFileSync } from 'fs'
-import { writeFile } from 'fs/promises'
-import { dirname, join } from 'path'
+import { dirname } from 'path'
 import { changeRelativePathToNewLocation, range } from './utils'
 import { fromByteArray, toByteArray } from 'base64-js'
 
 export interface SplitterConfig {
-	inputFilePath: string
-	outputFolderPath: string
+	map: any,
 	chunkWidth: number
-	chunkHeight: number
-	fs?: {
-		existsSync: typeof existsSync,
-		mkdirSync: typeof mkdirSync,
-		readFileSync: typeof readFileSync,
-		writeFile: typeof writeFile
-	}
+	chunkHeight: number,
 }
 
 export interface MapMasterFile {
@@ -27,58 +18,39 @@ export interface MapMasterFile {
 	mapWidth: number
 	tileWidth: number
 	tileHeight: number
-	layers: unknown[]
+	globalLayers: unknown[]
 	tilesets: unknown[]
 }
 
-export async function splitMap(config: SplitterConfig): Promise<undefined> {
-	if (!config.inputFilePath || !config.outputFolderPath) {
-		throw 'invalid arguments, inputFilePath and outputFolderPath must be set'
-	}
-
-	if (config.fs === undefined) {
-		config.fs = {
-			existsSync, mkdirSync, readFileSync, writeFile
-		}
-	}
-
-	if (!config.fs.existsSync(config.outputFolderPath)) {
-		config.fs.mkdirSync(config.outputFolderPath)
-	}
-
-	const mapFileContent = config.fs.readFileSync(config.inputFilePath, { encoding: 'utf8' })
-	const mapContent = JSON.parse(mapFileContent)
-	const master = createMasterFile(mapContent, config.chunkWidth, config.chunkHeight, config.inputFilePath, config.outputFolderPath)
-	const chunks = createChunks(mapContent, master)
-
-	const chunkFileWritePromises = chunks.map((chunk) => {
-		if (config.fs === undefined) {
-			throw 'config.fs suddenly got undefined'
-		}
-		const chunkFilePath = join(config.outputFolderPath, `chunk${chunk.id}.json`)
-		return config.fs.writeFile(chunkFilePath, JSON.stringify(chunk))
-	})
-
-	for (const p of chunkFileWritePromises) {
-		await p
+export function changeFilepaths (tiledEntity: Record<string, unknown>, oldPosition: string, newPosition: string) {
+	if (Array.isArray(tiledEntity.tilesets)) {
+		tiledEntity.tilesets = tiledEntity.tilesets.map(tileset => ({
+			...tileset,
+			image: changeRelativePathToNewLocation(oldPosition, newPosition, tileset.image)
+		}))
 	}
 }
 
-function createMasterFile(
-	map,
-	chunkWidth: number,
-	chunkHeight: number,
-	inputFilePath: string,
-	outputFolderPath: string
-): MapMasterFile {
-	const mapWidth = map.width
-	const mapHeight = map.height
-	const horizontalChunkAmount = Math.ceil(mapWidth / chunkWidth)
-	const verticalChunkAmount = Math.ceil(mapHeight / chunkHeight)
+export function splitMap(config: SplitterConfig): {master: MapMasterFile, chunks: Record<string, unknown>[]} {
+	const master = createMasterFile(config)
+	const chunks = createChunks(config.map, master)
 
 	return {
-		chunkWidth,
-		chunkHeight,
+		master,
+		chunks
+	}
+}
+
+function createMasterFile(config: SplitterConfig): MapMasterFile {
+	const map = config.map
+	const mapWidth = map.width
+	const mapHeight = map.height
+	const horizontalChunkAmount = Math.ceil(mapWidth / config.chunkWidth)
+	const verticalChunkAmount = Math.ceil(mapHeight / config.chunkHeight)
+
+	return {
+		chunkWidth: config.chunkWidth,
+		chunkHeight: config.chunkHeight,
 		horizontalChunkAmount,
 		verticalChunkAmount,
 		layerAmount: map.layers.length,
@@ -86,16 +58,13 @@ function createMasterFile(
 		mapWidth: map.width,
 		tileWidth: map.tilewidth,
 		tileHeight: map.tileheight,
-		layers: map.layers.filter(layer => layer.type !== 'tilelayer'),
-		tilesets: map.tilesets.map((tileset) => ({
-			...tileset,
-			image: changeRelativePathToNewLocation(dirname(inputFilePath), outputFolderPath, tileset.image),
-		})),
+		globalLayers: map.layers.filter(layer => layer.type !== 'tilelayer'),
+		tilesets: map.tilesets
 	}
 }
 
 function createChunks(map, master: MapMasterFile) {
-	const totalChunkAmount = master.horizontalChunkAmount * master.verticalChunkAmount
+	const totalChunkAmount = master.horizontalChunkAmount*master.verticalChunkAmount
 	return range(totalChunkAmount).map((chunkId) => createChunk(map, master, chunkId))
 }
 
