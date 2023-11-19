@@ -2,9 +2,9 @@ import { changeRelativePathToNewLocation, range } from './utils'
 import { fromByteArray, toByteArray } from 'base64-js'
 
 export interface SplitterConfig {
-	map: any,
+	map: any
 	chunkWidth: number
-	chunkHeight: number,
+	chunkHeight: number
 }
 
 export interface MapMasterFile {
@@ -21,22 +21,35 @@ export interface MapMasterFile {
 	tilesets: unknown[]
 }
 
-export function changeFilepaths (tiledEntity: MapMasterFile | Record<string, unknown>, oldPosition: string, newPosition: string) {
+export function changeFilepaths(
+	tiledEntity: MapMasterFile | Record<string, unknown>,
+	oldPosition: string,
+	newPosition: string
+) {
 	if (Array.isArray(tiledEntity.tilesets)) {
-		tiledEntity.tilesets = tiledEntity.tilesets.map(tileset => ({
+		tiledEntity.tilesets = tiledEntity.tilesets.map((tileset) => ({
 			...tileset,
-			image: changeRelativePathToNewLocation(oldPosition, newPosition, tileset.image)
+			image: changeRelativePathToNewLocation(oldPosition, newPosition, tileset.image),
 		}))
 	}
 }
 
-export function splitMap(config: SplitterConfig): {master: MapMasterFile, chunks: Record<string, unknown>[]} {
+export function splitMap(config: SplitterConfig): { master: MapMasterFile; chunks: Record<string, unknown>[] } {
+	if (
+		config.chunkHeight <= 0 ||
+		config.chunkWidth <= 0 ||
+		!Number.isInteger(config.chunkHeight) ||
+		!Number.isInteger(config.chunkWidth)
+	) {
+		throw 'chunk side lengths must be positive integers'
+	}
+
 	const master = createMasterFile(config)
 	const chunks = createChunks(config.map, master)
 
 	return {
 		master,
-		chunks
+		chunks,
 	}
 }
 
@@ -57,13 +70,13 @@ function createMasterFile(config: SplitterConfig): MapMasterFile {
 		mapWidth: map.width,
 		tileWidth: map.tilewidth,
 		tileHeight: map.tileheight,
-		globalLayers: map.layers.filter(layer => layer.type !== 'tilelayer'),
-		tilesets: map.tilesets
+		globalLayers: map.layers.filter((layer) => layer.type !== 'tilelayer'),
+		tilesets: map.tilesets,
 	}
 }
 
 function createChunks(map, master: MapMasterFile) {
-	const totalChunkAmount = master.horizontalChunkAmount*master.verticalChunkAmount
+	const totalChunkAmount = master.horizontalChunkAmount * master.verticalChunkAmount
 	return range(totalChunkAmount).map((chunkId) => createChunk(map, master, chunkId))
 }
 
@@ -71,7 +84,7 @@ function createChunk(map, master: MapMasterFile, chunkId: number) {
 	const { chunkWidth, chunkHeight, horizontalChunkAmount, mapHeight, mapWidth } = master
 
 	const chunkTopLeftX = (chunkId % horizontalChunkAmount) * chunkWidth
-	const chunkTopLeftY = (Math.floor(chunkId / horizontalChunkAmount)) * chunkHeight
+	const chunkTopLeftY = Math.floor(chunkId / horizontalChunkAmount) * chunkHeight
 
 	const chunk = {
 		...map,
@@ -119,12 +132,12 @@ function extractChunkFromTileLayer(layer, master: MapMasterFile, chunkTopLeftX: 
 			newArr.set(item, prev.length)
 			return newArr
 		}, new Uint32Array())
-	
+
 	return encodeTiles(layer, extractedTiles)
 }
 
-function decodeTiles (layer): Uint32Array {
-	if (layer.compression !== "") {
+function decodeTiles(layer): Uint32Array {
+	if (layer.compression !== '') {
 		throw 'doesnt support file compression'
 	}
 	if (layer.encoding === 'base64') {
@@ -136,7 +149,7 @@ function decodeTiles (layer): Uint32Array {
 	}
 }
 
-function encodeTiles (layer, extractedTiles) {
+function encodeTiles(layer, extractedTiles) {
 	if (layer.encoding === 'base64') {
 		const uint8 = new Uint8Array(extractedTiles.buffer)
 		return fromByteArray(uint8)
