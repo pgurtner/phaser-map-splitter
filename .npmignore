@@ -1,6 +1,8 @@
-tests
-src
+tests/
+src/
 phaser-map-splitter-*.tgz
+.prettierrc
+jest.config.js
 
 # Logs
 logs
