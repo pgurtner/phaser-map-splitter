@@ -1,7 +1,8 @@
 {
   "name": "phaser-map-splitter",
   "version": "0.9.0",
-  "description": "",
+  "description": "TS package for splitting Tiled maps into chunks for dynamic loading in phaser 3 games",
+  "keywords": ["phaser", "games", "Tiled"],  
   "main": "src/index.ts",
   "scripts": {
     "test": "jest",
