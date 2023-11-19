@@ -3,13 +3,23 @@
   "version": "0.9.0",
   "description": "TS package for splitting Tiled maps into chunks for dynamic loading in phaser 3 games",
   "keywords": ["phaser", "games", "Tiled"],  
-  "main": "src/index.ts",
+  "main": "built/index.js",
+  "types": "built/index.d.ts",
   "scripts": {
+    "prepublish": "tsc",
     "test": "jest",
     "build": "tsc"
   },
   "author": "pgurtner",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pgurtner/phaser-map-splitter.git"
+  },
+  "homepage": "https://github.com/pgurtner/phaser-map-splitter",
+  "bugs": {
+    "url": "https://github.com/pgurtner/phaser-map-splitter/issues"
+  },
   "dependencies": {
     "base64-js": "^1.5.1"
   },
