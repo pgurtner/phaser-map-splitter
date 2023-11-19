@@ -3,6 +3,7 @@ src/
 phaser-map-splitter-*.tgz
 .prettierrc
 jest.config.js
+tsconfig.json
 
 # Logs
 logs
