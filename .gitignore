@@ -1,6 +1,6 @@
 built/
 tests/map_tests/
-tests/real-test.ts
+tests/real-test.js
 phaser-map-splitter-*.tgz
 
 # Logs
