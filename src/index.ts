@@ -34,7 +34,7 @@ export function changeFilepaths(
 	}
 }
 
-export function splitMap(config: SplitterConfig): { master: MapMasterFile; chunks: Record<string, unknown>[] } {
+export async function splitMap(config: SplitterConfig): Promise<{ master: MapMasterFile; chunks: Record<string, unknown>[] }> {
 	if (
 		config.chunkHeight <= 0 ||
 		config.chunkWidth <= 0 ||
@@ -45,7 +45,7 @@ export function splitMap(config: SplitterConfig): { master: MapMasterFile; chunk
 	}
 
 	const master = createMasterFile(config)
-	const chunks = createChunks(config.map, master)
+	const chunks = await createChunks(config.map, master)
 
 	return {
 		master,
@@ -75,12 +75,14 @@ function createMasterFile(config: SplitterConfig): MapMasterFile {
 	}
 }
 
-function createChunks(map, master: MapMasterFile) {
+async function createChunks(map, master: MapMasterFile) {
 	const totalChunkAmount = master.horizontalChunkAmount * master.verticalChunkAmount
-	return range(totalChunkAmount).map((chunkId) => createChunk(map, master, chunkId))
+	map.layers.filter(layer => layer.type === "tilelayer").forEach(layer => layer.data = decodeTiles(layer))
+
+	return Promise.all(range(totalChunkAmount).map((chunkId) => createChunk(map, master, chunkId)))
 }
 
-function createChunk(map, master: MapMasterFile, chunkId: number) {
+async function createChunk(map, master: MapMasterFile, chunkId: number) {
 	const { chunkWidth, chunkHeight, horizontalChunkAmount, mapHeight, mapWidth } = master
 
 	const chunkTopLeftX = (chunkId % horizontalChunkAmount) * chunkWidth
@@ -117,13 +119,11 @@ function extractChunkFromTileLayer(layer, master: MapMasterFile, chunkTopLeftX: 
 	const remainingRows = Math.min(chunkHeight, master.mapHeight - chunkTopLeftY)
 	const remainingCols = Math.min(chunkWidth, master.mapWidth - chunkTopLeftX)
 
-	const decodedTiles = decodeTiles(layer)
-
 	const extractedTiles = range(remainingRows)
 		.map((y) => {
 			const begin = liststart + y * mapWidth
 			const end = begin + remainingCols
-			return decodedTiles.slice(begin, end)
+			return layer.data.slice(begin, end)
 		})
 		.flat()
 		.reduce((prev, item) => {
