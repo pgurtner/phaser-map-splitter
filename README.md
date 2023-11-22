@@ -1,24 +1,32 @@
 TS package for splitting Tiled maps into chunks for dynamic loading in phaser3 games. This started based on this [blog post](https://www.dynetisgames.com/2018/02/24/manage-big-maps-phaser-3/).
 
-This is still unfinished. Currently only base64 encoded uncompressed Tilemaps saved as JSON files are supported.
+This is still unfinished. Currently only base64 encoded uncompressed Tilemaps saved as JSON or tmj files are supported.
 
+The data string is split in the usual left-to-right rows-before-columns way because that's how Tiled builds them. E. g. the chunk array ABCDEFGHI for a quadratic map would resemble (numbers are the chunk ids):
+```
+(0,A)	(1,B)	(2,C)
+(3,D)	(4,E)	(5,F)
+(6,G)	(7,H)	(8,I)
+```
 # how to use
 ```ts
 import { splitMap, changeFilepaths } from "phaser-map-splitter"
 
-const map = JSON.parse(rawJSONMapContent)
+async function main () {
+	const map = JSON.parse(rawJSONMapContent)
 
-const config: SplitterConfig = {
-	map,
-	chunkWidth: 32,
-	chunkHeight: 32,
+	const config: SplitterConfig = {
+		map,
+		chunkWidth: 32,
+		chunkHeight: 32,
+	}
+
+	const { master, chunks } = await splitMap(config)
+
+	// if you want to put the master and chunks files in another location than the originial map file you have to adjust file paths in the new files
+	changeFilepaths(master, oldPosition, newPosition)
+	chunks.forEach(chunk => changeFilepaths(chunk, oldPosition, newPosition))
 }
-
-const { master, chunks } = splitMap(config)
-
-// if you want to put the master and chunks files in another location than the originial map file you have to adjust file paths in the new files
-changeFilepaths(master, oldPosition, newPosition)
-chunks.forEach(chunk => changeFilepaths(chunk, oldPosition, newPosition))
 ```
 
 ## master file
