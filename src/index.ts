@@ -29,7 +29,8 @@ export function changeFilepaths(
 	if (Array.isArray(tiledEntity.tilesets)) {
 		tiledEntity.tilesets = tiledEntity.tilesets.map((tileset) => ({
 			...tileset,
-			image: changeRelativePathToNewLocation(oldPosition, newPosition, tileset.image),
+			image: tileset.image === undefined ? undefined : changeRelativePathToNewLocation(oldPosition, newPosition, tileset.image),
+			source: tileset.source === undefined ? undefined : changeRelativePathToNewLocation(oldPosition, newPosition, tileset.source)
 		}))
 	}
 }
